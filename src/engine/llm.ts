@@ -4,6 +4,7 @@ export async function generateContent(prompt: string): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error("OPENROUTER_API_KEY environment variable is not set.");
 
+  // Respect user model choice
   const model = process.env.OPENROUTER_MODEL || "qwen/qwen3-coder-next";
   const payload = { model, messages: [{ role: "user", content: prompt }] };
 
@@ -31,14 +32,20 @@ CRITICAL ARCHITECTURE CONCEPTS:
 STRICT API RULES (DO NOT INVENT METHODS):
 - Required Import: \`import type { ExecutableNode } from "../core/types";\`
 - Export Signature: \`export const run: ExecutableNode = async (args, ctx) => { ... }\`
-- AI INTELLIGENCE (CRITICAL): You have a built-in LLM! For ANY task requiring NLP, summarization, analysis, extraction, or translation, DO NOT write manual algorithmic code (like TF-IDF or word counting). JUST USE THE AI: \`const summary = await ctx.llm.generate("Summarize this text: " + rawText);\`
+- AI INTELLIGENCE (CRITICAL): You have a built-in LLM! For ANY task requiring NLP, summarization, analysis, extraction, or translation, DO NOT write manual algorithmic code. JUST USE THE AI: \`const summary = await ctx.llm.generate("Summarize: " + text);\`
 - Call Sub-Nodes: \`await ctx.runNode("string_name", args)\`. The first argument MUST be a hardcoded string!
-- Memory Write: \`await ctx.memory.write("path/file.txt", data)\`. (Do NOT use Bun.write for memory!)
-- Memory Read: \`await ctx.memory.read("path/file.txt")\`.
+- Memory Write: \`await ctx.memory.write("filename.json", data)\`. (Do NOT use Bun.write for memory!)
+- Memory Read: \`await ctx.memory.read("filename.json")\`.
 - Global fetch: You run in Bun. You MUST use the global \`fetch()\` function to make HTTP requests. DO NOT invent \`ctx.llm.fetch\`.
-- Web Parsing: You run in Bun (Node.js backend). There is NO \`window\`, NO \`document\`, and NO \`DOMParser\`. Use Regex to parse HTML.
+- Web Parsing: You run in Bun (Node.js backend). There is NO \`window\`, NO \`document\`, and NO \`DOMParser\`. Use Regex to parse HTML or XML.
 
-Output ONLY raw TypeScript code. No markdown formatting (\`\`\`ts). No explanations. Your output will be saved directly as a .ts file.`;
+BEST PRACTICES FOR NEWS/WEB:
+- DO NOT try to fetch() individual article URLs from Bloomberg, Reuters, Google News, etc. They have bot protection and will return 403 or empty pages.
+- INSTEAD: Fetch the Google News RSS feed directly: \`https://news.google.com/rss/search?q=\${encodeURIComponent(query)}\`
+- Use Regex to extract the <title> and <description> tags from the RSS feed.
+- Summarize the <title> and <description> text directly! You do not need to visit the underlying article URL to write a summary.
+
+Output ONLY raw TypeScript code. No markdown formatting (\`\`\`ts). No explanations.`;
 
   const fullPrompt = `${sysPrompt}\n\nTask: ${prompt}`;
   console.log(`[Compiler] Thinking and writing node: ${name}.ts...`);
