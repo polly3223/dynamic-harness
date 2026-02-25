@@ -24,26 +24,28 @@ Your ONLY job is to write a single ExecutableNode in TypeScript.
 YOU MUST NEVER WRITE PYTHON. NO PYTHON. ONLY TYPESCRIPT.
 
 CRITICAL ARCHITECTURE CONCEPTS:
-1. KEEP IT SIMPLE: Write the shortest, cleanest code possible. Do not overcomplicate.
-2. PURE EXECUTION: Your code should ONLY execute logic or call other nodes. DO NOT compile or write new nodes inside this code.
-3. COMPOSABILITY: Do not mix concerns. A search tool should ONLY search and return text/URLs. A summarizer should ONLY summarize. 
+1. HYBRID APPROACH (LIBRARY): We have a "Library" of stable, pre-written tools. DO NOT rewrite them if they are mentioned as available. 
+   - 'tool_web_search': { query: string } -> returns [{ title, link, pubDate, source }]
+   - 'tool_web_fetch': { url: string } -> returns raw text (stripped of HTML tags)
+   - 'tool_summarize': { text: string, instructions?: string } -> returns AI summary
+2. KEEP IT SIMPLE: Write the shortest, cleanest code possible.
+3. PURE EXECUTION: Your code should ONLY execute logic or call other nodes. DO NOT compile or write new nodes inside this code.
 
 STRICT API RULES:
 - Required Import: \`import type { ExecutableNode } from "../core/types";\`
 - Export Signature: \`export const run: ExecutableNode = async (args, ctx) => { ... }\`
-- AI INTELLIGENCE: For ANY task requiring NLP, summarization, or extraction, DO NOT write manual algorithms. JUST USE THE AI: \`const summary = await ctx.llm.generate("Summarize: " + text);\`
+- AI INTELLIGENCE: For NLP, use 'tool_summarize' or \`await ctx.llm.generate("Summarize: " + text);\`.
 - Call Sub-Nodes: \`await ctx.runNode("string_name", args)\`.
 - Memory Write: \`await ctx.memory.write("filename.json", data)\`. (Do NOT use Bun.write for memory!)
-- Global fetch: You run in Bun. You MUST use the global \`fetch()\` function. DO NOT invent \`ctx.llm.fetch\`.
+- Global fetch: Use the global \`fetch()\` function. DO NOT invent \`ctx.llm.fetch\`.
 
 BEST PRACTICES FOR NEWS/WEB:
-- DO NOT fetch individual article URLs from Bloomberg, Reuters, etc. (bot protection).
-- INSTEAD, fetch the Google News RSS feed directly: \`https://news.google.com/rss/search?q=\${encodeURIComponent(query)}\`
-- USE THIS EXACT BULLETPROOF REGEX TO PARSE THE RSS (It handles CDATA automatically):
+- If 'tool_web_search' is enough, use it. 
+- If you must scrape a custom site, use 'tool_web_fetch'.
+- USE THIS EXACT BULLETPROOF REGEX TO PARSE RSS IF NEEDED:
   \`const regex = /<item>[\\s\\S]*?<title>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/title>[\\s\\S]*?<link>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/link>[\\s\\S]*?<\\/item>/gi;\`
-  \`let match; while ((match = regex.exec(xml)) !== null) { results.push({ title: match[1], url: match[2] }); }\`
 
-Output ONLY raw TypeScript code. No markdown formatting (\`\`\`ts). No explanations.`;
+Output ONLY raw TypeScript code. No markdown. No explanations.`;
 
   const fullPrompt = `${sysPrompt}\n\nTask: ${prompt}`;
   console.log(`[Compiler] Thinking and writing node: ${name}.ts...`);

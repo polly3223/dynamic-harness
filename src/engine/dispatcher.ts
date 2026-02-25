@@ -9,18 +9,20 @@ export async function dispatchTask(task: string, ctx: NodeContext): Promise<any>
     const prompt = `You are the Architect and Dispatcher for a polymorphic TypeScript runtime engine.
 The user wants: "${task}"
 
-Existing TS executable nodes: [ ${existingNodes.join(', ')} ]
+STANDARD LIBRARY (Always Available - PREFER THESE):
+- 'tool_web_search': { query: string } -> returns [{ title, link, pubDate, source }]
+- 'tool_web_fetch': { url: string } -> returns raw text
+- 'tool_summarize': { text: string, instructions?: string } -> returns AI summary
+
+EXISTING DYNAMIC NODES: [ ${existingNodes.join(', ')} ]
 
 RULES FOR ARCHITECTING:
-1. If the request requires live data, scraping, or multi-step logic, choose "COMPILE_NEW_PLAN".
-2. **GENERIC TOOLS ONLY:** Tools MUST be entirely generic and reusable. NEVER name a tool after a specific subject. 
-   - BAD: "tool_search_apple_news", "tool_microsoft_summarizer"
-   - GOOD: "tool_search_news", "tool_summarize_article"
-   You must pass the specific subjects (e.g., "Apple") as \`args\` inside the plan.
-3. If a REQUIRED GENERIC TOOL is MISSING, define it in the 'nodesToCompile' array.
-4. If an existing generic node already does what you need, REUSE IT! Do not compile a new one.
+1. PREFER THE LIBRARY: If a Library tool exists, use it instead of compiling a new one.
+2. HYBRID APPROACH: You can combine Library tools and Dynamic nodes in the same plan.
+3. GENERIC TOOLS ONLY: If you MUST compile a new tool, keep it entirely generic. 
+4. PLAN NAMING: 'newPlanName' must be highly specific (e.g., 'plan_research_microsoft').
 
-Return a strictly valid JSON object. Escape newlines with \\n.
+Return a strictly valid JSON object:
 {
     "action": "DIRECT_ANSWER" | "REUSE_PLAN" | "COMPILE_NEW_PLAN",
     "answer": "String answer if DIRECT_ANSWER, else null",
@@ -28,11 +30,11 @@ Return a strictly valid JSON object. Escape newlines with \\n.
     "nodesToCompile": [
         {
             "name": "generic_tool_name",
-            "instructions": "Specific prompt for the compiler on how to write this modular tool. Remind it to accept generic args."
+            "instructions": "Specific prompt for the compiler."
         }
     ],
-    "newPlanName": "Suggested name (e.g., 'plan_research_x') if COMPILE_NEW_PLAN, else null",
-    "newPlanInstructions": "Detailed prompt for the main plan. It should orchestrate the tools using ctx.runNode('generic_tool', { query: 'specific_subject' })."
+    "newPlanName": "Suggested name if COMPILE_NEW_PLAN, else null",
+    "newPlanInstructions": "Detailed prompt for the main plan orchestrator. Remind it which Library tools and which dynamic tools to use."
 }`;
 
     const response = await ctx.llm.generate(prompt);
@@ -41,9 +43,20 @@ Return a strictly valid JSON object. Escape newlines with \\n.
     try {
         const jsonMatch = response.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error("No JSON found in response");
-        decision = new Function(`return ${jsonMatch[0]}`)();
+        
+        let jsonStr = jsonMatch[0];
+        // Clean up common LLM JSON mistakes (like unescaped newlines in strings)
+        jsonStr = jsonStr.replace(/(?<!\\)\n/g, ' '); 
+        
+        try {
+           decision = JSON.parse(jsonStr);
+        } catch (e) {
+           // Fallback to JS evaluation if JSON.parse fails due to loose formatting
+           decision = eval(`(${jsonMatch[0]})`);
+        }
     } catch (e) {
-        throw new Error("Dispatcher failed to return valid JSON.");
+        console.error("Failed to parse Dispatcher response as JSON.\nRaw response:\n", response);
+        throw new Error(`Dispatcher failed to return valid JSON. Error: ${(e as Error).message}`);
     }
     
     if (decision.action === 'DIRECT_ANSWER') {
@@ -72,7 +85,7 @@ Return a strictly valid JSON object. Escape newlines with \\n.
         
         CRITICAL RULES FOR THIS PLAN:
         1. YOU MUST WRITE TYPESCRIPT. NO PYTHON.
-        2. Pass specific arguments to the generic tools (e.g., \`ctx.runNode("tool_search_news", { query: "Apple" })\`).
+        2. Pass specific arguments to the generic tools (e.g., \`ctx.runNode("tool_search_news", { query: "Microsoft" })\`).
         3. Parallelize sub-tasks heavily using Promise.allSettled.
         4. ALWAYS use \`await ctx.memory.write("filename.json", data)\` to save the final results.
         5. DO NOT use ctx.llm.writeNode inside this plan. Assume all required tools have already been compiled and exist.`;

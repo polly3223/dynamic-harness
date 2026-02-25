@@ -4,6 +4,7 @@ import { NodeContext } from "../core/types";
 import { generateContent, writeNode } from "./llm";
 
 const NODES_DIR = join(import.meta.dir, "..", "nodes");
+const LIBRARY_DIR = join(import.meta.dir, "..", "library");
 const MEMORY_DIR = join(import.meta.dir, "..", "..", "memory");
 
 export function createEngine(): NodeContext {
@@ -34,8 +35,11 @@ export function createEngine(): NodeContext {
 
   const getAvailableNodes = async (): Promise<string[]> => {
     try {
-      const files = await readdir(NODES_DIR);
-      return files.filter(f => f.endsWith('.ts')).map(f => f.replace('.ts', ''));
+      const dynamicFiles = (await readdir(NODES_DIR)).filter(f => f.endsWith('.ts'));
+      const libraryFiles = (await readdir(LIBRARY_DIR)).filter(f => f.endsWith('.ts'));
+      
+      const all = [...new Set([...dynamicFiles, ...libraryFiles])];
+      return all.map(f => f.replace('.ts', ''));
     } catch (e) { return []; }
   };
 
@@ -54,7 +58,11 @@ export function createEngine(): NodeContext {
     const available = await getAvailableNodes();
     if (!available.includes(nodeName)) throw new Error(`Node '${nodeName}' does not exist on disk.`);
 
-    const nodePath = join(NODES_DIR, `${nodeName}.ts`);
+    // Check library first, then nodes
+    let nodePath = join(LIBRARY_DIR, `${nodeName}.ts`);
+    if (!(await Bun.file(nodePath).exists())) {
+        nodePath = join(NODES_DIR, `${nodeName}.ts`);
+    }
     const cacheBuster = Date.now();
     
     try {
