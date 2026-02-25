@@ -13,9 +13,12 @@ Existing TS executable nodes: [ ${existingNodes.join(', ')} ]
 
 RULES FOR ARCHITECTING:
 1. If the request requires live data, scraping, or multi-step logic, choose "COMPILE_NEW_PLAN".
-2. You must build HIGHLY COMPOSABLE systems. Do not write monolithic plans. Break tasks down into reusable tools (e.g., 'tool_rss_fetcher', 'tool_summarizer').
-3. If a required capability is MISSING from the 'Existing nodes' list, define it in the 'nodesToCompile' array. The system will compile all these tools in parallel BEFORE writing the main plan.
-4. If an existing node EXACTLY matches a sub-task, reuse it! Do not re-compile it.
+2. **GENERIC TOOLS ONLY:** Tools MUST be entirely generic and reusable. NEVER name a tool after a specific subject. 
+   - BAD: "tool_search_apple_news", "tool_microsoft_summarizer"
+   - GOOD: "tool_search_news", "tool_summarize_article"
+   You must pass the specific subjects (e.g., "Apple") as \`args\` inside the plan.
+3. If a REQUIRED GENERIC TOOL is MISSING, define it in the 'nodesToCompile' array.
+4. If an existing generic node already does what you need, REUSE IT! Do not compile a new one.
 
 Return a strictly valid JSON object. Escape newlines with \\n.
 {
@@ -24,12 +27,12 @@ Return a strictly valid JSON object. Escape newlines with \\n.
     "nodeToRun": "Name of the node to run if REUSE_PLAN, else null",
     "nodesToCompile": [
         {
-            "name": "tool_name",
-            "instructions": "Specific prompt for the compiler on how to write this modular tool."
+            "name": "generic_tool_name",
+            "instructions": "Specific prompt for the compiler on how to write this modular tool. Remind it to accept generic args."
         }
     ],
     "newPlanName": "Suggested name (e.g., 'plan_research_x') if COMPILE_NEW_PLAN, else null",
-    "newPlanInstructions": "Detailed prompt for the main plan. It should simply orchestrate the tools using ctx.runNode()."
+    "newPlanInstructions": "Detailed prompt for the main plan. It should orchestrate the tools using ctx.runNode('generic_tool', { query: 'specific_subject' })."
 }`;
 
     const response = await ctx.llm.generate(prompt);
@@ -40,12 +43,10 @@ Return a strictly valid JSON object. Escape newlines with \\n.
         if (!jsonMatch) throw new Error("No JSON found in response");
         decision = new Function(`return ${jsonMatch[0]}`)();
     } catch (e) {
-        console.error("Failed to parse Dispatcher response as JSON. Raw response:\n", response);
         throw new Error("Dispatcher failed to return valid JSON.");
     }
     
     if (decision.action === 'DIRECT_ANSWER') {
-        console.log(`[Dispatcher] Choosing to answer directly.`);
         return decision.answer;
     } 
     
@@ -57,7 +58,6 @@ Return a strictly valid JSON object. Escape newlines with \\n.
     if (decision.action === 'COMPILE_NEW_PLAN') {
         console.log(`[Dispatcher] Architecting new system: ${decision.newPlanName}`);
         
-        // AOT (Ahead-of-Time) Compilation of dependencies in parallel!
         if (decision.nodesToCompile && decision.nodesToCompile.length > 0) {
             console.log(`[Dispatcher] Compiling ${decision.nodesToCompile.length} dependencies in parallel...`);
             await Promise.all(
@@ -72,7 +72,7 @@ Return a strictly valid JSON object. Escape newlines with \\n.
         
         CRITICAL RULES FOR THIS PLAN:
         1. YOU MUST WRITE TYPESCRIPT. NO PYTHON.
-        2. You MUST rely on sub-nodes for the actual work. Call them using \`ctx.runNode("tool_name", args)\`.
+        2. Pass specific arguments to the generic tools (e.g., \`ctx.runNode("tool_search_news", { query: "Apple" })\`).
         3. Parallelize sub-tasks heavily using Promise.allSettled.
         4. ALWAYS use \`await ctx.memory.write("filename.json", data)\` to save the final results.
         5. DO NOT use ctx.llm.writeNode inside this plan. Assume all required tools have already been compiled and exist.`;

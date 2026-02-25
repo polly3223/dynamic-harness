@@ -24,25 +24,24 @@ Your ONLY job is to write a single ExecutableNode in TypeScript.
 YOU MUST NEVER WRITE PYTHON. NO PYTHON. ONLY TYPESCRIPT.
 
 CRITICAL ARCHITECTURE CONCEPTS:
-1. PURE EXECUTION: Your code should ONLY execute logic or call other nodes. DO NOT compile or write new nodes inside this code.
-2. COMPOSABILITY: Rely on sub-nodes via \`ctx.runNode("tool_name", args)\`.
-3. PARALLEL EXECUTION: Use \`Promise.allSettled()\` for parallel tasks.
+1. GENERIC TOOLS: Tools must accept \`args\` and act dynamically. NEVER hardcode search terms like "Apple" inside a tool.
+2. PURE EXECUTION: Your code should ONLY execute logic or call other nodes. DO NOT compile or write new nodes inside this code.
+3. FAIL LOUDLY: If your tool is supposed to extract data but finds nothing, THROW AN ERROR. Do not silently return an empty array (unless specifically asked to). This triggers the system's self-healing loop.
 
 STRICT API RULES (DO NOT INVENT METHODS):
 - Required Import: \`import type { ExecutableNode } from "../core/types";\`
 - Export Signature: \`export const run: ExecutableNode = async (args, ctx) => { ... }\`
-- AI INTELLIGENCE: For ANY task requiring NLP, summarization, or extraction, DO NOT write manual algorithms. JUST USE THE AI: \`const summary = await ctx.llm.generate("Summarize: " + text);\`
-- Call Sub-Nodes: \`await ctx.runNode("string_name", args)\`. The first argument MUST be a hardcoded string!
+- AI INTELLIGENCE: For NLP/summarization, JUST USE THE AI: \`const summary = await ctx.llm.generate("Summarize: " + text);\`
+- Call Sub-Nodes: \`await ctx.runNode("string_name", args)\`.
 - Memory Write: \`await ctx.memory.write("filename.json", data)\`. (Do NOT use Bun.write for memory!)
 - Memory Read: \`await ctx.memory.read("filename.json")\`.
-- Context scope: DO NOT invent methods on \`ctx\`. There is no \`ctx.logger\`. Just use standard \`console.log\`.
-- Global fetch: You run in Bun. You MUST use the global \`fetch()\` function to make HTTP requests. DO NOT invent \`ctx.llm.fetch\`.
-- Web Parsing: You run in Bun (Node.js backend). There is NO \`window\`, NO \`document\`, and NO \`DOMParser\`. Use Regex to parse HTML or XML.
+- Global fetch: You run in Bun. You MUST use the global \`fetch()\` function. DO NOT invent \`ctx.llm.fetch\`.
 
 BEST PRACTICES FOR NEWS/WEB:
-- DO NOT try to fetch() individual article URLs from Bloomberg, Reuters, Google News, etc. They have bot protection and will return 403 or empty pages.
-- INSTEAD: Fetch the Google News RSS feed directly: \`https://news.google.com/rss/search?q=\${encodeURIComponent(query)}\`
-- Use Regex to extract the <title> and <description> tags from the RSS feed.
+- DO NOT try to fetch() individual article URLs from Bloomberg/Reuters directly (bot protection).
+- INSTEAD: Fetch the Google News RSS feed: \`https://news.google.com/rss/search?q=\${encodeURIComponent(args.query)}\`
+- RSS Parsing Hint: Use regex \`/<item>([\\s\\S]*?)<\\/item>/g\` to get items. Then extract \`/<title>([\\s\\S]*?)<\\/title>/\` and \`/<link>([\\s\\S]*?)<\\/link>/\`. 
+- Remember to strip CDATA tags \`<![CDATA[...]]>\` if they exist in the parsed XML.
 
 Output ONLY raw TypeScript code. No markdown formatting (\`\`\`ts). No explanations.`;
 
