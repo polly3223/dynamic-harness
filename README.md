@@ -1,4 +1,4 @@
-# Rachel 10: Dynamic Harness
+# Dynamic Harness: Dynamic Harness
 
 A completely plastic AI engine where Plans, Memory, and Tools are all executable TypeScript nodes running in a native Bun environment.
 

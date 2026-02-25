@@ -9,8 +9,8 @@ export async function generateContent(prompt: string): Promise<string> {
     throw new Error("OPENROUTER_API_KEY environment variable is not set.");
   }
 
-  // Use a capable model for reasoning and coding
-  const model = "google/gemini-2.5-pro";
+  // Use Gemini 3.1 Pro as the core compiler
+  const model = "google/gemini-3.1-pro-preview";
   
   const payload = {
     model: model,
@@ -23,8 +23,8 @@ export async function generateContent(prompt: string): Promise<string> {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${apiKey}`,
-      "HTTP-Referer": "https://github.com/polly3223/Rachel10", // Required by OpenRouter
-      "X-Title": "Rachel 10 Engine",
+      "HTTP-Referer": "https://github.com/polly3223/dynamic-harness",
+      "X-Title": "Dynamic Harness Engine",
       "Content-Type": "application/json"
     },
     body: JSON.stringify(payload)
@@ -45,7 +45,7 @@ export async function generateContent(prompt: string): Promise<string> {
 }
 
 export async function writeNode(name: string, prompt: string): Promise<void> {
-  const sysPrompt = `You are the core compiler for the Rachel10 polymorphic agent engine.
+  const sysPrompt = `You are the core compiler for the dynamic-harness polymorphic agent engine.
 Your task is to write an ExecutableNode in TypeScript that fulfills the user's request.
 
 RULES:
