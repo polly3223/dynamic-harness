@@ -5,7 +5,8 @@ import { dispatchTask } from "./engine/dispatcher";
 // 1. Setup the terminal screen
 const screen = blessed.screen({
   smartCSR: true,
-  title: 'Dynamic Harness CLI'
+  title: 'Dynamic Harness CLI',
+  fullUnicode: true // Helps with special characters
 });
 
 // Left Panel: Chat Log (Top)
@@ -20,7 +21,7 @@ const chatLog = blessed.log({
   label: ' Chat History ',
   scrollable: true,
   scrollbar: { ch: ' ', track: { bg: 'cyan' }, style: { inverse: true } },
-  tags: true // FIX: This renders the {color-fg} tags
+  tags: true
 });
 
 // Left Panel: Input Box (Bottom)
@@ -49,25 +50,34 @@ const systemLog = blessed.log({
   label: ' Engine & Compiler Logs ',
   scrollable: true,
   scrollbar: { ch: ' ', track: { bg: 'magenta' }, style: { inverse: true } },
-  tags: true // FIX: Renders tags here too
+  tags: true
 });
 
-// FIX: Catch Ctrl-C on BOTH the screen and the input box
 const exitApp = () => process.exit(0);
 screen.key(['escape', 'C-c'], exitApp);
 chatInput.key(['escape', 'C-c'], exitApp);
 
-// Override console methods to pipe into the Right Panel
-const originalLog = console.log;
-const originalError = console.error;
+// HELPER: Truncate massive strings to prevent UI tearing in blessed
+const truncate = (str: string, maxLen = 1500) => {
+  if (!str) return '';
+  // Clean out weird control characters that can break terminal rendering
+  const cleanStr = str.replace(/[\x00-\x09\x0B-\x1F\x7F]/g, '');
+  if (cleanStr.length > maxLen) {
+    return cleanStr.substring(0, maxLen) + `\n... [TRUNCATED: ${cleanStr.length - maxLen} more characters]`;
+  }
+  return cleanStr;
+};
 
+// Override console methods
 console.log = (...args) => {
-  systemLog.log(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' '));
+  const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+  systemLog.log(truncate(msg, 2000)); // Cap logs in the right panel
   screen.render();
 };
 
 console.error = (...args) => {
-  systemLog.log(`{red-fg}${args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')}{/red-fg}`);
+  const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+  systemLog.log(`{red-fg}${truncate(msg, 2000)}{/red-fg}`);
   screen.render();
 };
 
@@ -76,10 +86,8 @@ chatLog.log('{green-fg}🚀 Booting Dynamic Harness Engine...{/green-fg}');
 chatLog.log('{gray-fg}Running on Qwen3 Coder Next. Type a task below to start.{/gray-fg}\n');
 
 const ctx = createEngine();
-
 let isProcessing = false;
 
-// Handle Chat Submission
 chatInput.on('submit', async (text) => {
   if (isProcessing || !text.trim()) {
     chatInput.clearValue();
@@ -96,9 +104,17 @@ chatInput.on('submit', async (text) => {
 
   try {
     const response = await dispatchTask(text.trim(), ctx);
-    chatLog.log(`{green-fg}Rachel:{/green-fg} ${typeof response === 'object' ? JSON.stringify(response, null, 2) : response}`);
+    
+    // Clear "Thinking..."
+    chatLog.popLine();
+    
+    const responseStr = typeof response === 'object' ? JSON.stringify(response, null, 2) : String(response);
+    
+    // Cap the final chat output so massive raw HTML doesn't break the left panel either
+    chatLog.log(`{green-fg}Rachel:{/green-fg}\n${truncate(responseStr, 3000)}`);
     chatLog.log('---');
   } catch (err) {
+    chatLog.popLine();
     chatLog.log(`{red-fg}Error:{/red-fg} ${(err as Error).message}`);
   }
 
@@ -107,6 +123,5 @@ chatInput.on('submit', async (text) => {
   screen.render();
 });
 
-// Focus and render
 chatInput.focus();
 screen.render();
