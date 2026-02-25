@@ -24,24 +24,24 @@ Your ONLY job is to write a single ExecutableNode in TypeScript.
 YOU MUST NEVER WRITE PYTHON. NO PYTHON. ONLY TYPESCRIPT.
 
 CRITICAL ARCHITECTURE CONCEPTS:
-1. GENERIC TOOLS: Tools must accept \`args\` and act dynamically. NEVER hardcode search terms like "Apple" inside a tool.
+1. KEEP IT SIMPLE: Write the shortest, cleanest code possible. Do not overcomplicate.
 2. PURE EXECUTION: Your code should ONLY execute logic or call other nodes. DO NOT compile or write new nodes inside this code.
-3. FAIL LOUDLY: If your tool is supposed to extract data but finds nothing, THROW AN ERROR. Do not silently return an empty array (unless specifically asked to). This triggers the system's self-healing loop.
+3. COMPOSABILITY: Do not mix concerns. A search tool should ONLY search and return text/URLs. A summarizer should ONLY summarize. 
 
-STRICT API RULES (DO NOT INVENT METHODS):
+STRICT API RULES:
 - Required Import: \`import type { ExecutableNode } from "../core/types";\`
 - Export Signature: \`export const run: ExecutableNode = async (args, ctx) => { ... }\`
-- AI INTELLIGENCE: For NLP/summarization, JUST USE THE AI: \`const summary = await ctx.llm.generate("Summarize: " + text);\`
+- AI INTELLIGENCE: For ANY task requiring NLP, summarization, or extraction, DO NOT write manual algorithms. JUST USE THE AI: \`const summary = await ctx.llm.generate("Summarize: " + text);\`
 - Call Sub-Nodes: \`await ctx.runNode("string_name", args)\`.
 - Memory Write: \`await ctx.memory.write("filename.json", data)\`. (Do NOT use Bun.write for memory!)
-- Memory Read: \`await ctx.memory.read("filename.json")\`.
 - Global fetch: You run in Bun. You MUST use the global \`fetch()\` function. DO NOT invent \`ctx.llm.fetch\`.
 
 BEST PRACTICES FOR NEWS/WEB:
-- DO NOT try to fetch() individual article URLs from Bloomberg/Reuters directly (bot protection).
-- INSTEAD: Fetch the Google News RSS feed: \`https://news.google.com/rss/search?q=\${encodeURIComponent(args.query)}\`
-- RSS Parsing Hint: Use regex \`/<item>([\\s\\S]*?)<\\/item>/g\` to get items. Then extract \`/<title>([\\s\\S]*?)<\\/title>/\` and \`/<link>([\\s\\S]*?)<\\/link>/\`. 
-- Remember to strip CDATA tags \`<![CDATA[...]]>\` if they exist in the parsed XML.
+- DO NOT fetch individual article URLs from Bloomberg, Reuters, etc. (bot protection).
+- INSTEAD, fetch the Google News RSS feed directly: \`https://news.google.com/rss/search?q=\${encodeURIComponent(query)}\`
+- USE THIS EXACT BULLETPROOF REGEX TO PARSE THE RSS (It handles CDATA automatically):
+  \`const regex = /<item>[\\s\\S]*?<title>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/title>[\\s\\S]*?<link>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/link>[\\s\\S]*?<\\/item>/gi;\`
+  \`let match; while ((match = regex.exec(xml)) !== null) { results.push({ title: match[1], url: match[2] }); }\`
 
 Output ONLY raw TypeScript code. No markdown formatting (\`\`\`ts). No explanations.`;
 
@@ -52,7 +52,7 @@ Output ONLY raw TypeScript code. No markdown formatting (\`\`\`ts). No explanati
   code = code.replace(/^```[a-z]*\n/mi, '').replace(/```$/m, '').trim();
 
   if (code.includes("import duckduckgo_search") || code.includes("def run(")) {
-      throw new Error("Compiler hallucinated Python code instead of TypeScript. Triggering self-heal retry.");
+      throw new Error("Compiler hallucinated Python code instead of TypeScript.");
   }
 
   const fullPath = join(import.meta.dir, "..", "nodes", `${name}.ts`);

@@ -9,7 +9,6 @@ async function runWithRetries(initialTask: string, ctx: any, maxRetries = 2) {
     try {
       const response = await dispatchTask(taskToExecute, ctx);
       console.log(`\n✅ SUCCESS (Attempt ${retryCount + 1}):`);
-      // truncate response if massive
       const resStr = JSON.stringify(response, null, 2);
       console.log(resStr ? (resStr.length > 500 ? resStr.substring(0, 500) + "... [TRUNCATED]" : resStr) : "No output returned.");
       return true;
@@ -19,7 +18,8 @@ async function runWithRetries(initialTask: string, ctx: any, maxRetries = 2) {
       
       if (retryCount < maxRetries) {
         console.log("   -> Triggering Self-Heal loop...");
-        taskToExecute = `The previous attempt failed with this error: ${errorMessage}. Please compile a NEW plan that avoids this error. Be extremely defensive with your code (e.g. use Promise.allSettled, check if arrays exist before calling .map, use regex safely, and ALWAYS use ctx.runNode with string literals).`;
+        // FIX: Don't tell it to be "defensive". Tell it to fix the actual bug cleanly.
+        taskToExecute = `The previous attempt failed with this error: ${errorMessage}. Please compile a NEW plan that fixes this exact bug. Keep the code simple and clean. Do not create unnecessary wrapper nodes.`;
         retryCount++;
       } else {
         console.error("   -> Max retries reached. Task failed permanently.");
@@ -34,7 +34,6 @@ async function run() {
   console.log("🚀 RACHEL 10: POLYMORPHIC AGENT SHOWCASE");
   console.log("==========================================\n");
 
-  // Wipe slate clean for the showcase
   try {
       const fs = await import("fs/promises");
       const path = await import("path");
@@ -55,19 +54,16 @@ async function run() {
   
   const ctx = createEngine();
 
-  // --- STAGE 1: THE FIRST TASK ---
   console.log("\n[STAGE 1] The user asks for a complex task from scratch.");
   const task1 = "Find the 3 most recent news articles about Apple, fetch their summaries, and save them to memory.";
   console.log(`Task: "${task1}"`);
   
   await runWithRetries(task1, ctx);
 
-  // Check what nodes were permanently left behind on the disk
   const nodesAfterTask1 = await ctx.getAvailableNodes();
   console.log("\n[INFRASTRUCTURE BUILT] Look what the agent left behind on disk:");
   nodesAfterTask1.forEach((node: string) => console.log(`  - src/nodes/${node}.ts`));
 
-  // --- STAGE 2: THE REUSABILITY TEST ---
   console.log("\n------------------------------------------");
   console.log("[STAGE 2] The user asks for a DIFFERENT task that requires similar capabilities.");
   const task2 = "I need a report on Microsoft. Find 3 articles and summarize them to memory.";
