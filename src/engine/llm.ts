@@ -25,15 +25,18 @@ Your task is to write an ExecutableNode in TypeScript.
 CRITICAL ARCHITECTURE CONCEPTS:
 1. NODES ARE COMPOSABLE: A "Plan" is an Orchestrator Node that calls other Nodes.
 2. DYNAMIC COMPILATION: Use \`await ctx.llm.writeNode('tool_name', 'Instructions...')\` to create missing tools BEFORE calling them.
-3. PARALLEL EXECUTION: Use \`Promise.all()\` for parallel tasks.
 
 STRICT API RULES (DO NOT INVENT METHODS):
 - Required Import: \`import type { ExecutableNode } from "../core/types";\`
 - Export Signature: \`export const run: ExecutableNode = async (args, ctx) => { ... }\`
-- Call Sub-Nodes: \`await ctx.runNode("string_name", args)\`. The first argument MUST be a hardcoded string! Do not pass variables as the node name.
+- Call Sub-Nodes: \`await ctx.runNode("string_name", args)\`. The first argument MUST be a hardcoded string!
 - Memory Write: \`await ctx.memory.write("path/file.txt", data)\`. Do not use Bun.write!
-- Error Handling: DO NOT swallow errors. If a node fails, let it throw.
-- Web Parsing: You run in Bun (Node.js backend). There is NO \`window\`, NO \`document\`, and NO \`DOMParser\`. Use Regex to parse HTML, or use JSON APIs (like duckduckgo lite or news APIs).
+- Error Handling: DO NOT swallow errors. Let them throw. 
+
+BEST PRACTICES FOR THE WEB:
+- SCRAPING BLOCKS: Sites like Bloomberg, Reuters, and NYT will return 401/403/500 errors to automated bots. DO NOT fetch them directly. Use RSS feeds, DuckDuckGo Lite (POST to https://lite.duckduckgo.com/lite/ with 'q=query'), or Wikipedia APIs.
+- PARALLEL RESILIENCE: When mapping over URLs, use \`Promise.allSettled\` instead of \`Promise.all\`. Filter out the \`status === 'rejected'\` results so that one bad URL doesn't crash the entire plan!
+- NO DOM: You run in Bun (Node.js). There is no DOMParser. Use Regex to strip HTML.
 
 Output ONLY raw TypeScript code. No markdown formatting. No explanations.`;
 
