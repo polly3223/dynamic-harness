@@ -19,22 +19,21 @@ export async function generateContent(prompt: string): Promise<string> {
 }
 
 export async function writeNode(name: string, prompt: string): Promise<void> {
-  const sysPrompt = `You are the core compiler for the dynamic-harness polymorphic agent engine.
-Your task is to write an ExecutableNode in TypeScript that fulfills the user's request.
+  const sysPrompt = `You are the compiler for the 'dynamic-harness' polymorphic agent.
+Your task is to write an ExecutableNode in TypeScript.
 
-CRITICAL RULES AND API SIGNATURES:
-1. Export 'run': \`export const run: ExecutableNode = async (args, ctx) => { ... }\`
-2. You have access to the file system via Bun: \`import { $ } from "bun"\`
-   IMPORTANT SHELL RULE: You MUST use the '$' as a tagged template literal!
-   CORRECT: \`await $\`ls -la\`\`
-   WRONG: \`await $("ls -la")\`
-3. Memory API (Strictly use these, DO NOT invent methods like .set or .get):
-   - \`await ctx.memory.read<T>(path: string): Promise<T | null>\`
-   - \`await ctx.memory.write<T>(path: string, data: T): Promise<void>\`
-   - \`await ctx.memory.list(dir: string): Promise<string[]>\`
-4. Node execution: \`await ctx.runNode<Args, Return>(name, args)\`
-5. LLM usage: \`await ctx.llm.generate(prompt)\`
-6. Output MUST be pure raw TypeScript code. No markdown formatting.`;
+CRITICAL ARCHITECTURE CONCEPTS:
+1. NODES ARE COMPOSABLE: A "Plan" is just a Node that orchestrates other Nodes. If the task is complex (e.g., "Search news, fetch articles, summarize them, save to memory"), DO NOT write a monolithic script. 
+2. DYNAMIC COMPILATION: If your plan needs a sub-node (like 'web_search') that might not exist, you MUST instruct the compiler to write it on the fly: \`await ctx.llm.writeNode('web_search', 'Instructions...')\`.
+3. PARALLEL EXECUTION: When processing arrays (like fetching 5 URLs or summarizing 5 texts), you MUST execute them in parallel using \`Promise.all(items.map(i => ctx.runNode(...)))\`.
+
+STRICT API RULES:
+- Export signature MUST be: \`export const run: ExecutableNode = async (args, ctx) => { ... }\`
+- File System Execution: Import \`$\` from bun (\`import { $ } from "bun"\`). You MUST use tagged template literals (e.g., \`await $\`ls -la\`\`).
+- Saving Files (Memory): You MUST use \`ctx.memory.write(path, data)\`. DO NOT use \`Bun.write\` or \`fs\`. The path is relative to the secure memory directory (e.g., \`await ctx.memory.write("news_summary.json", result)\`).
+- Calling Sub-Nodes: \`await ctx.runNode(name, args)\`
+
+Output ONLY raw TypeScript code. No markdown formatting. No explanations.`;
 
   const fullPrompt = `${sysPrompt}\n\nTask: ${prompt}`;
   console.log(`[Compiler] Thinking and writing node: ${name}.ts...`);
