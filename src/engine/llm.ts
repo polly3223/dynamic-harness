@@ -1,40 +1,46 @@
 /**
- * LLM Compiler Interface via Gemini 3.1 Pro Preview
+ * LLM Compiler Interface via OpenRouter
  */
 import { join } from "path";
 
 export async function generateContent(prompt: string): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    throw new Error("GEMINI_API_KEY environment variable is not set.");
+    throw new Error("OPENROUTER_API_KEY environment variable is not set.");
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key=${apiKey}`;
+  // Use a capable model for reasoning and coding
+  const model = "google/gemini-2.5-pro";
   
   const payload = {
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    generationConfig: {
-      thinkingConfig: { thinkingLevel: "MEDIUM" }
-    }
+    model: model,
+    messages: [
+      { role: "user", content: prompt }
+    ]
   };
 
-  const response = await fetch(url, {
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "HTTP-Referer": "https://github.com/polly3223/Rachel10", // Required by OpenRouter
+      "X-Title": "Rachel 10 Engine",
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify(payload)
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Gemini API Error: ${response.status} - ${errorText}`);
+    throw new Error(`OpenRouter API Error: ${response.status} - ${errorText}`);
   }
 
   const data = await response.json();
   try {
-    return data.candidates[0].content.parts[0].text;
+    return data.choices[0].message.content;
   } catch (err) {
-    console.error("Failed to parse Gemini response:", JSON.stringify(data, null, 2));
-    throw new Error("Invalid response format from Gemini");
+    console.error("Failed to parse OpenRouter response:", JSON.stringify(data, null, 2));
+    throw new Error("Invalid response format from OpenRouter");
   }
 }
 
