@@ -6,13 +6,13 @@ export async function dispatchTask(task: string, ctx: NodeContext): Promise<any>
     const existingNodes = await ctx.getAvailableNodes();
     console.log(`[Dispatcher] Found ${existingNodes.length} existing nodes.`);
     
-    const prompt = `You are the Dispatcher for a polymorphic agent capable of writing its own code.
+    const prompt = `You are the Dispatcher for a polymorphic TypeScript runtime engine.
 The user wants: "${task}"
 
-Existing executable nodes: [ ${existingNodes.join(', ')} ]
+Existing TS executable nodes: [ ${existingNodes.join(', ')} ]
 
 RULES:
-1. If the request requires fetching live data, scraping, files, or multi-step logic, you MUST choose "COMPILE_NEW_PLAN". DO NOT say "I can't do this".
+1. If the request requires fetching live data, scraping, files, or multi-step logic, choose "COMPILE_NEW_PLAN".
 2. If it's just a simple greeting ("hi") or basic fact ("what is 2+2"), use "DIRECT_ANSWER".
 3. If an existing node EXACTLY matches the request, use "REUSE_PLAN".
 
@@ -29,28 +29,10 @@ Return a strictly valid JSON object. DO NOT include raw newlines inside the stri
     
     let decision;
     try {
-        // Find JSON block
         const jsonMatch = response.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error("No JSON found in response");
-        let rawStr = jsonMatch[0];
-        
-        // Very aggressive cleanup for bad LLM JSON with unescaped newlines in strings
-        // We will just let JSON.parse try, if it fails we fall back to a safer regex or regex-based cleanup
-        try {
-            decision = JSON.parse(rawStr);
-        } catch (e) {
-            // Unescaped newlines fix
-            rawStr = rawStr.replace(/(?<!\\)\n/g, '\\n');
-            // But we actually DO want literal newlines between keys. It's too complex to regex perfectly.
-            // Let's just ask the LLM again? No, let's use a loose JSON parser or fix the prompt.
-            // Actually, since we use V8, let's try using `Function` to evaluate it as an object literal.
-            // It's safe here because the LLM generated it, but `eval` is dangerous.
-            // Let's just stick to JSON.parse but strip control chars.
-        }
-        
         // Safe evaluation
         decision = new Function(`return ${jsonMatch[0]}`)();
-        
     } catch (e) {
         console.error("Failed to parse Dispatcher response as JSON. Raw response:\n", response);
         throw new Error("Dispatcher failed to return valid JSON.");
@@ -69,14 +51,15 @@ Return a strictly valid JSON object. DO NOT include raw newlines inside the stri
     if (decision.action === 'COMPILE_NEW_PLAN') {
         console.log(`[Dispatcher] Compiling new plan: ${decision.newPlanName}`);
         
-        const compilerPrompt = `Write an orchestrator plan to achieve this: ${decision.newPlanInstructions}
+        const compilerPrompt = `Write a TypeScript orchestrator plan to achieve this: ${decision.newPlanInstructions}
         
         CRITICAL RULES FOR ORCHESTRATION:
-        1. Existing nodes you can use via ctx.runNode(): [ ${existingNodes.join(', ')} ]
-        2. If a required capability doesn't exist, compile it FIRST: \`await ctx.llm.writeNode('tool_name', 'prompt')\`. YOU MUST AWAIT writeNode BEFORE YOU runNode IT!
-        3. ALWAYS pass string literals to runNode: \`ctx.runNode("tool_name", args)\`. NEVER pass a variable as the node name.
-        4. Parallelize sub-tasks heavily using Promise.allSettled (not Promise.all) to avoid crashing on a single failure.
-        5. DO NOT silently swallow errors. If a tool fails, let it throw.`;
+        1. YOU MUST WRITE TYPESCRIPT. NO PYTHON. NO BASH SCRIPTS.
+        2. Existing nodes you can use via ctx.runNode(): [ ${existingNodes.join(', ')} ]
+        3. If a required capability doesn't exist, compile it FIRST: \`await ctx.llm.writeNode('tool_name', 'instructions')\`. YOU MUST AWAIT writeNode BEFORE YOU runNode IT!
+        4. ALWAYS pass string literals to runNode: \`ctx.runNode("tool_name", args)\`. NEVER pass a variable as the node name.
+        5. Parallelize sub-tasks heavily using Promise.allSettled (not Promise.all) to avoid crashing on a single failure.
+        6. DO NOT silently swallow errors. If a tool fails, let it throw.`;
         
         await ctx.llm.writeNode(decision.newPlanName, compilerPrompt);
         return await ctx.runNode(decision.newPlanName, { originalTask: task });
