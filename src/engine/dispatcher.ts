@@ -31,7 +31,6 @@ Return a strictly valid JSON object. DO NOT include raw newlines inside the stri
     try {
         const jsonMatch = response.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error("No JSON found in response");
-        // Safe evaluation
         decision = new Function(`return ${jsonMatch[0]}`)();
     } catch (e) {
         console.error("Failed to parse Dispatcher response as JSON. Raw response:\n", response);
@@ -54,12 +53,12 @@ Return a strictly valid JSON object. DO NOT include raw newlines inside the stri
         const compilerPrompt = `Write a TypeScript orchestrator plan to achieve this: ${decision.newPlanInstructions}
         
         CRITICAL RULES FOR ORCHESTRATION:
-        1. YOU MUST WRITE TYPESCRIPT. NO PYTHON. NO BASH SCRIPTS.
+        1. YOU MUST WRITE TYPESCRIPT. NO PYTHON.
         2. Existing nodes you can use via ctx.runNode(): [ ${existingNodes.join(', ')} ]
         3. If a required capability doesn't exist, compile it FIRST: \`await ctx.llm.writeNode('tool_name', 'instructions')\`. YOU MUST AWAIT writeNode BEFORE YOU runNode IT!
-        4. ALWAYS pass string literals to runNode: \`ctx.runNode("tool_name", args)\`. NEVER pass a variable as the node name.
-        5. Parallelize sub-tasks heavily using Promise.allSettled (not Promise.all) to avoid crashing on a single failure.
-        6. DO NOT silently swallow errors. If a tool fails, let it throw.`;
+        4. AI USAGE: For text analysis/summarization, tell the compiler to explicitly use \`await ctx.llm.generate("Summarize: " + text)\` instead of writing manual NLP algorithms!
+        5. ALWAYS use \`await ctx.memory.write("filename.json", data)\` to save the final results to the memory folder.
+        6. Parallelize sub-tasks heavily using Promise.allSettled.`;
         
         await ctx.llm.writeNode(decision.newPlanName, compilerPrompt);
         return await ctx.runNode(decision.newPlanName, { originalTask: task });

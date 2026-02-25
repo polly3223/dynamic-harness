@@ -4,8 +4,6 @@ export async function generateContent(prompt: string): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error("OPENROUTER_API_KEY environment variable is not set.");
 
-  // Respect user model choice (assuming they changed it to gemini in their local env, 
-  // but we'll default to qwen3 here unless specified otherwise. We will use whatever model the user wants).
   const model = process.env.OPENROUTER_MODEL || "qwen/qwen3-coder-next";
   const payload = { model, messages: [{ role: "user", content: prompt }] };
 
@@ -33,11 +31,12 @@ CRITICAL ARCHITECTURE CONCEPTS:
 STRICT API RULES (DO NOT INVENT METHODS):
 - Required Import: \`import type { ExecutableNode } from "../core/types";\`
 - Export Signature: \`export const run: ExecutableNode = async (args, ctx) => { ... }\`
-- Call Sub-Nodes: \`await ctx.runNode("string_name", args)\`. The first argument MUST be a hardcoded string! Do not pass variables as the node name.
-- Memory Write: \`await ctx.memory.write("path/file.txt", data)\`. Do not use Bun.write!
-- Global fetch: You run in Bun. You MUST use the global \`fetch()\` function to make HTTP requests. DO NOT invent \`ctx.llm.fetch\` or \`ctx.fetch\`.
-- Web Parsing: You run in Bun (Node.js backend). There is NO \`window\`, NO \`document\`, and NO \`DOMParser\`. Use standard global \`fetch\` and Regex to parse HTML.
-- Execution: If you need to use Bun's shell, import it: \`import { $ } from "bun"\` and use template literals: \`await $\`ls\`\`. DO NOT try to execute python scripts unless specifically requested by the user.
+- AI INTELLIGENCE (CRITICAL): You have a built-in LLM! For ANY task requiring NLP, summarization, analysis, extraction, or translation, DO NOT write manual algorithmic code (like TF-IDF or word counting). JUST USE THE AI: \`const summary = await ctx.llm.generate("Summarize this text: " + rawText);\`
+- Call Sub-Nodes: \`await ctx.runNode("string_name", args)\`. The first argument MUST be a hardcoded string!
+- Memory Write: \`await ctx.memory.write("path/file.txt", data)\`. (Do NOT use Bun.write for memory!)
+- Memory Read: \`await ctx.memory.read("path/file.txt")\`.
+- Global fetch: You run in Bun. You MUST use the global \`fetch()\` function to make HTTP requests. DO NOT invent \`ctx.llm.fetch\`.
+- Web Parsing: You run in Bun (Node.js backend). There is NO \`window\`, NO \`document\`, and NO \`DOMParser\`. Use Regex to parse HTML.
 
 Output ONLY raw TypeScript code. No markdown formatting (\`\`\`ts). No explanations. Your output will be saved directly as a .ts file.`;
 
@@ -45,10 +44,8 @@ Output ONLY raw TypeScript code. No markdown formatting (\`\`\`ts). No explanati
   console.log(`[Compiler] Thinking and writing node: ${name}.ts...`);
   
   let code = await generateContent(fullPrompt);
-  // Very aggressively strip ALL markdown blocks.
   code = code.replace(/^```[a-z]*\n/mi, '').replace(/```$/m, '').trim();
 
-  // Guard rails: if the LLM completely failed and wrote python, we throw before saving
   if (code.includes("import duckduckgo_search") || code.includes("def run(")) {
       throw new Error("Compiler hallucinated Python code instead of TypeScript. Triggering self-heal retry.");
   }
