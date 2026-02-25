@@ -6,7 +6,7 @@ import { generateContent, writeNode } from "./llm";
 const NODES_DIR = join(import.meta.dir, "..", "nodes");
 const MEMORY_DIR = join(import.meta.dir, "..", "..", "memory");
 
-export function createEngine(): NodeContext["runNode"] {
+export function createEngine(): NodeContext {
   
   const memory: NodeContext["memory"] = {
     basePath: MEMORY_DIR,
@@ -41,8 +41,25 @@ export function createEngine(): NodeContext["runNode"] {
     writeNode: writeNode
   };
 
+  const getAvailableNodes = async (): Promise<string[]> => {
+    try {
+      const files = await readdir(NODES_DIR);
+      // Return just the base names without the .ts extension
+      return files.filter(f => f.endsWith('.ts')).map(f => f.replace('.ts', ''));
+    } catch (e) {
+      return [];
+    }
+  };
+
   const runNode = async <T = any, R = any>(nodeName: string, args: T): Promise<R> => {
     console.log(`[Engine] Executing Node: ${nodeName}`);
+    
+    // Safety check: Does the node exist?
+    const available = await getAvailableNodes();
+    if (!available.includes(nodeName)) {
+        throw new Error(`Node '${nodeName}' does not exist.`);
+    }
+
     const nodePath = join(NODES_DIR, `${nodeName}.ts`);
     const cacheBuster = Date.now();
     
@@ -50,7 +67,7 @@ export function createEngine(): NodeContext["runNode"] {
       const module = await import(`${nodePath}?t=${cacheBuster}`);
       if (!module.run) throw new Error(`Node ${nodeName} does not export a 'run' function.`);
 
-      const context: NodeContext = { memory, llm, runNode };
+      const context: NodeContext = { memory, llm, getAvailableNodes, runNode };
       return await module.run(args, context);
       
     } catch (error) {
@@ -59,5 +76,5 @@ export function createEngine(): NodeContext["runNode"] {
     }
   };
 
-  return runNode;
+  return { memory, llm, getAvailableNodes, runNode };
 }

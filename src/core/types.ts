@@ -1,12 +1,8 @@
 /**
  * Rachel 10 Core Types
- * Everything is a Node. A Plan is a Node. A Tool is a Node.
  */
 
-// Context passed to every node upon execution
 export interface NodeContext {
-  // Hierarchical File-System Memory
-  // Represents a root directory path (and all its children)
   memory: {
     basePath: string;
     read: <T = any>(relativePath: string) => Promise<T | null>;
@@ -14,13 +10,14 @@ export interface NodeContext {
     list: (relativeDir: string) => Promise<string[]>;
   };
   
-  // The LLM Compiler 
   llm: {
     generate: (prompt: string) => Promise<string>;
-    writeNode: (name: string, code: string) => Promise<void>;
+    writeNode: (name: string, prompt: string) => Promise<void>;
   };
   
-  // The executor to call other nodes (enabling composability & implicit multi-agent)
+  // The system can now ask itself what nodes are available
+  getAvailableNodes: () => Promise<string[]>;
+  
   runNode: <T = any, R = any>(nodeName: string, args: T) => Promise<R>;
 }
 
