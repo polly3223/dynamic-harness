@@ -24,7 +24,7 @@ Your ONLY job is to write a single ExecutableNode in TypeScript.
 YOU MUST NEVER WRITE PYTHON. NO PYTHON. ONLY TYPESCRIPT.
 
 CRITICAL ARCHITECTURE CONCEPTS:
-1. PURE EXECUTION: Your code should ONLY execute logic or call other nodes. DO NOT compile or write new nodes inside this code (no ctx.llm.writeNode).
+1. PURE EXECUTION: Your code should ONLY execute logic or call other nodes. DO NOT compile or write new nodes inside this code.
 2. COMPOSABILITY: Rely on sub-nodes via \`ctx.runNode("tool_name", args)\`.
 3. PARALLEL EXECUTION: Use \`Promise.allSettled()\` for parallel tasks.
 
@@ -35,6 +35,7 @@ STRICT API RULES (DO NOT INVENT METHODS):
 - Call Sub-Nodes: \`await ctx.runNode("string_name", args)\`. The first argument MUST be a hardcoded string!
 - Memory Write: \`await ctx.memory.write("filename.json", data)\`. (Do NOT use Bun.write for memory!)
 - Memory Read: \`await ctx.memory.read("filename.json")\`.
+- Context scope: DO NOT invent methods on \`ctx\`. There is no \`ctx.logger\`. Just use standard \`console.log\`.
 - Global fetch: You run in Bun. You MUST use the global \`fetch()\` function to make HTTP requests. DO NOT invent \`ctx.llm.fetch\`.
 - Web Parsing: You run in Bun (Node.js backend). There is NO \`window\`, NO \`document\`, and NO \`DOMParser\`. Use Regex to parse HTML or XML.
 
@@ -57,5 +58,4 @@ Output ONLY raw TypeScript code. No markdown formatting (\`\`\`ts). No explanati
 
   const fullPath = join(import.meta.dir, "..", "nodes", `${name}.ts`);
   await Bun.write(fullPath, code);
-  // console.log(\`[Compiler] Successfully wrote node to \${name}.ts\`); // Moved logging to the Dispatcher for parallel clarity
 }
