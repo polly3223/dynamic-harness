@@ -15,9 +15,7 @@ export interface NodeContext {
     writeNode: (name: string, prompt: string) => Promise<void>;
   };
   
-  // The system can now ask itself what nodes are available
   getAvailableNodes: () => Promise<string[]>;
-  
   runNode: <T = any, R = any>(nodeName: string, args: T) => Promise<R>;
 }
 

@@ -1,4 +1,4 @@
-import { NodeContext } from "../core/types";
+import type { NodeContext } from "../core/types";
 
 /**
  * The Dispatcher is the fast, stateless LLM layer that sits at the front.

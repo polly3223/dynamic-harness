@@ -14,7 +14,7 @@ export async function generateContent(prompt: string): Promise<string> {
   });
 
   if (!response.ok) throw new Error(`OpenRouter API Error: ${response.status}`);
-  const data = await response.json();
+  const data = await response.json() as any;
   return data.choices[0].message.content;
 }
 
@@ -25,6 +25,9 @@ Your task is to write an ExecutableNode in TypeScript that fulfills the user's r
 CRITICAL RULES AND API SIGNATURES:
 1. Export 'run': \`export const run: ExecutableNode = async (args, ctx) => { ... }\`
 2. You have access to the file system via Bun: \`import { $ } from "bun"\`
+   IMPORTANT SHELL RULE: You MUST use the '$' as a tagged template literal!
+   CORRECT: \`await $\`ls -la\`\`
+   WRONG: \`await $("ls -la")\`
 3. Memory API (Strictly use these, DO NOT invent methods like .set or .get):
    - \`await ctx.memory.read<T>(path: string): Promise<T | null>\`
    - \`await ctx.memory.write<T>(path: string, data: T): Promise<void>\`

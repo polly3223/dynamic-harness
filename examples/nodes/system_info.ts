@@ -1,4 +1,4 @@
-import { ExecutableNode } from "../core/types";
+import { ExecutableNode } from "../../src/core/types";
 import { $ } from "bun";
 
 export const run: ExecutableNode = async (args, ctx) => {

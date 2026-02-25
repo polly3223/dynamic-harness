@@ -1,6 +1,6 @@
 import { join } from "path";
 import { mkdir, readdir } from "fs/promises";
-import { NodeContext } from "../core/types";
+import type { NodeContext } from "../core/types";
 import { generateContent, writeNode } from "./llm";
 
 const NODES_DIR = join(import.meta.dir, "..", "nodes");
@@ -13,12 +13,14 @@ export function createEngine(): NodeContext {
     read: async <T>(relativePath: string): Promise<T | null> => {
       try {
         const file = Bun.file(join(MEMORY_DIR, relativePath));
-        return (await file.exists()) ? await file.json() : null;
+        if (!(await file.exists())) return null;
+        return await file.json();
       } catch (e) { return null; }
     },
     write: async <T>(relativePath: string, data: T): Promise<void> => {
       const fullPath = join(MEMORY_DIR, relativePath);
-      await mkdir(fullPath.substring(0, fullPath.lastIndexOf("/")), { recursive: true });
+      const dir = fullPath.substring(0, fullPath.lastIndexOf("/"));
+      if (dir) await mkdir(dir, { recursive: true });
       await Bun.write(fullPath, JSON.stringify(data, null, 2));
     },
     list: async (relativeDir: string): Promise<string[]> => {
@@ -35,12 +37,9 @@ export function createEngine(): NodeContext {
     } catch (e) { return []; }
   };
 
-  // Internal executor with depth tracking for the UI Graph
   const _internalRunNode = async (nodeName: string, args: any, depth: number = 0): Promise<any> => {
-    // UI Graph formatting
     const indent = depth === 0 ? "" : "│  ".repeat(depth - 1) + "├─ ";
-    const color = depth === 0 ? "{green-fg}" : "{cyan-fg}";
-    console.log(`${color}${indent}► [Node] ${nodeName}${color === '{green-fg}' ? '{/green-fg}' : '{/cyan-fg}'}`);
+    console.log(`{cyan-fg}${indent}► [Node] ${nodeName}{/cyan-fg}`);
     
     const available = await getAvailableNodes();
     if (!available.includes(nodeName)) throw new Error(`Node '${nodeName}' does not exist.`);
@@ -52,7 +51,6 @@ export function createEngine(): NodeContext {
       const module = await import(`${nodePath}?t=${cacheBuster}`);
       if (!module.run) throw new Error(`Node ${nodeName} lacks export 'run'.`);
 
-      // Recursively pass depth+1 to children so the graph indents properly
       const context: NodeContext = { 
         memory, llm, getAvailableNodes, 
         runNode: (childName, childArgs) => _internalRunNode(childName, childArgs, depth + 1) 
@@ -60,7 +58,7 @@ export function createEngine(): NodeContext {
       
       return await module.run(args, context);
     } catch (error) {
-      console.error(`{red-fg}${indent}✖ Fatal Error in '${nodeName}': ${(error as Error).message}{/red-fg}`);
+      console.error(`${indent}✖ Fatal Error in '${nodeName}': ${(error as Error).message}`);
       throw error;
     }
   };

@@ -1,4 +1,4 @@
-import { ExecutableNode } from "../core/types";
+import { ExecutableNode } from "../../src/core/types";
 
 export const run: ExecutableNode = async (args, ctx) => {
   console.log("[Bootstrapper] Testing Polymorphic Plan Execution...");
