@@ -37,14 +37,14 @@ Decide the best course of action. Return JSON exactly like this:
     if (decision.action === 'COMPILE_NEW_PLAN') {
         console.log(`[Dispatcher] Compiling new plan: ${decision.newPlanName}`);
         
-        // Emphasize orchestration and composability!
         const compilerPrompt = `Write an orchestrator plan to achieve this: ${decision.newPlanInstructions}
         
         CRITICAL RULES FOR ORCHESTRATION:
         1. Existing nodes you can use via ctx.runNode(): [ ${existingNodes.join(', ')} ]
-        2. If a required capability (like 'web_search') doesn't exist in that list, you MUST compile it first using \`await ctx.llm.writeNode('web_search', '...')\`.
-        3. Parallelize sub-tasks heavily using \`Promise.all\`.
-        4. ALWAYS use \`ctx.memory.write(path, data)\` to save results. Do not use Bun.write for data!`;
+        2. If a required capability doesn't exist, compile it FIRST: \`await ctx.llm.writeNode('tool_name', 'prompt')\`.
+        3. To check if a node exists programmatically in the plan, use \`await ctx.getAvailableNodes()\` (DO NOT invent methods like ctx.llm.listNodes).
+        4. Parallelize sub-tasks heavily using Promise.all.
+        5. ALWAYS use \`ctx.memory.write(path, data)\` to save results.`;
         
         await ctx.llm.writeNode(decision.newPlanName, compilerPrompt);
         return await ctx.runNode(decision.newPlanName, { originalTask: task });

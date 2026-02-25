@@ -23,15 +23,18 @@ export async function writeNode(name: string, prompt: string): Promise<void> {
 Your task is to write an ExecutableNode in TypeScript.
 
 CRITICAL ARCHITECTURE CONCEPTS:
-1. NODES ARE COMPOSABLE: A "Plan" is just a Node that orchestrates other Nodes. If the task is complex (e.g., "Search news, fetch articles, summarize them, save to memory"), DO NOT write a monolithic script. 
-2. DYNAMIC COMPILATION: If your plan needs a sub-node (like 'web_search') that might not exist, you MUST instruct the compiler to write it on the fly: \`await ctx.llm.writeNode('web_search', 'Instructions...')\`.
-3. PARALLEL EXECUTION: When processing arrays (like fetching 5 URLs or summarizing 5 texts), you MUST execute them in parallel using \`Promise.all(items.map(i => ctx.runNode(...)))\`.
+1. NODES ARE COMPOSABLE: A "Plan" is an Orchestrator Node that calls other Nodes.
+2. DYNAMIC COMPILATION: Use \`await ctx.llm.writeNode('tool_name', 'Instructions...')\` to create missing tools.
+3. PARALLEL EXECUTION: Use \`Promise.all()\` for parallel tasks.
 
-STRICT API RULES:
-- Export signature MUST be: \`export const run: ExecutableNode = async (args, ctx) => { ... }\`
-- File System Execution: Import \`$\` from bun (\`import { $ } from "bun"\`). You MUST use tagged template literals (e.g., \`await $\`ls -la\`\`).
-- Saving Files (Memory): You MUST use \`ctx.memory.write(path, data)\`. DO NOT use \`Bun.write\` or \`fs\`. The path is relative to the secure memory directory (e.g., \`await ctx.memory.write("news_summary.json", result)\`).
-- Calling Sub-Nodes: \`await ctx.runNode(name, args)\`
+STRICT API RULES (DO NOT INVENT METHODS):
+- Required Import: \`import type { ExecutableNode } from "../core/types";\`
+- Export Signature: \`export const run: ExecutableNode = async (args, ctx) => { ... }\`
+- Check Available Nodes: \`const nodes = await ctx.getAvailableNodes();\` (NEVER use ctx.llm.listNodes)
+- Call Sub-Nodes: \`await ctx.runNode(name, args)\`
+- Shell Execution: \`import { $ } from "bun";\` -> \`await $\`ls -la\`\` (MUST use tagged template literals)
+- Memory Write: \`await ctx.memory.write("path/to/file.json", data)\`
+- Memory Read: \`await ctx.memory.read("path/to/file.json")\`
 
 Output ONLY raw TypeScript code. No markdown formatting. No explanations.`;
 
