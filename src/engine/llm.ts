@@ -9,8 +9,8 @@ export async function generateContent(prompt: string): Promise<string> {
     throw new Error("OPENROUTER_API_KEY environment variable is not set.");
   }
 
-  // Use Gemini 3.1 Pro as the core compiler
-  const model = "google/gemini-3.1-pro-preview";
+  // Use Qwen3 Coder Next as the core compiler
+  const model = "qwen/qwen3-coder-next";
   
   const payload = {
     model: model,
@@ -23,8 +23,6 @@ export async function generateContent(prompt: string): Promise<string> {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${apiKey}`,
-      "HTTP-Referer": "https://github.com/polly3223/dynamic-harness",
-      "X-Title": "Dynamic Harness Engine",
       "Content-Type": "application/json"
     },
     body: JSON.stringify(payload)
