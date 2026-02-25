@@ -1,0 +1,10 @@
+{
+  "name": "rachel10",
+  "version": "1.0.0",
+  "description": "A completely plastic AI engine where Plans, Memory, and Tools are all executable TypeScript nodes.",
+  "module": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/index.ts"
+  }
+}

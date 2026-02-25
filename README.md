@@ -1,39 +1,38 @@
-# Rachel 10: Polymorphic Agent Engine
+# Rachel 10: Dynamic Harness
 
-The next evolution of AI agent architecture. Instead of a static harness trying to route a "chat assistant" through fixed tools, **everything is an executable TypeScript node**.
+A completely plastic AI engine where Plans, Memory, and Tools are all executable TypeScript nodes running in a native Bun environment.
 
-### The Core Philosophy
-1. **Unified Nodes:** There is no difference between a "Tool" and a "Plan". They are both just composable `.ts` files executing in a native Bun environment.
-2. **Implicit Multi-Agent:** Because plans are just async TypeScript, spawning multiple parallel agents is as simple as `Promise.all([runNode('A'), runNode('B')])`.
-3. **Hierarchical FS Memory:** No databases. Memory is purely a hierarchical filesystem path (JSON/Markdown files nested in folders). Nodes read/write branches of this tree.
-4. **Self-Healing at the Edge:** Errors are caught locally inside the node. The node can either handle it programmatically, or delegate the error to a specialized "Healer" node that writes new executable code to bypass the failure.
+## The Architecture
+- **Unified Nodes:** There is no difference between a "Tool" and a "Plan". They are both just composable `.ts` files.
+- **Dynamic Compiler:** The LLM actively writes new TypeScript nodes when it lacks a tool to complete a task.
+- **Hot-Reloading:** Nodes are imported dynamically at runtime with a cache-buster, meaning the LLM can write a tool and use it in the exact same execution loop without a restart.
+- **Dispatcher:** A stateless entry point that reads the user's prompt, scans the existing nodes, and decides whether to answer directly, reuse an existing plan, or instruct the compiler to write a new one.
 
-## Architecture
+## Setup
 
-```mermaid
-graph TD
-    Engine[Execution Engine] -->|Invokes| NodeA[Node: orchestrate_research.ts]
-    
-    subgraph Executable Nodes
-        NodeA -->|Promise.all| NodeB[Node: scrape_site_1.ts]
-        NodeA -->|Promise.all| NodeC[Node: scrape_site_2.ts]
-        
-        NodeB -->|If fail, delegate| NodeD[Node: error_healer.ts]
-        NodeD -.->|Analyzes & Writes| NodeE[Node: custom_scraper.ts]
-    end
-    
-    NodeA -.->|Reads/Writes| Mem[(File-System Memory Dir)]
-    NodeC -.->|Calls| LLM[LLM API: Summarize]
-    
-    style Engine fill:#4f46e5,stroke:#fff,color:#fff
-    style NodeA fill:#059669,stroke:#fff,color:#fff
-    style NodeB fill:#2563eb,stroke:#fff,color:#fff
-    style NodeC fill:#2563eb,stroke:#fff,color:#fff
-    style NodeD fill:#be123c,stroke:#fff,color:#fff
-    style NodeE fill:#8b5cf6,stroke:#fff,color:#fff
-    style Mem fill:#ca8a04,stroke:#fff,color:#fff
+1. Install [Bun](https://bun.sh/).
+2. Clone this repository.
+3. Install dependencies (none needed besides Bun itself!):
+```bash
+bun install
+```
+4. Set up your OpenRouter API key:
+```bash
+cp .env.example .env
+# Edit .env and add your OPENROUTER_API_KEY
 ```
 
-## Running the Engine
-*(Implementation pending)*
-The engine simply provides the runtime context (LLM compiler, Hierarchical Memory access, and Node Executor) and begins evaluating the root node.
+## Running
+Start the engine:
+```bash
+bun start
+```
+
+## Project Structure
+- `src/core/types.ts`: The unified `ExecutableNode` signature.
+- `src/engine/`: The runtime environment (Executor, Compiler, Dispatcher).
+- `src/nodes/`: Where the LLM will dynamically generate its own TypeScript tools and plans.
+- `examples/nodes/`: Examples of what the LLM generates when asked to perform complex parallel tasks.
+
+## License
+MIT
