@@ -6,12 +6,17 @@ export async function dispatchTask(task: string, ctx: NodeContext): Promise<any>
     const existingNodes = await ctx.getAvailableNodes();
     console.log(`[Dispatcher] Found ${existingNodes.length} existing nodes.`);
     
-    const prompt = `You are the Dispatcher for a polymorphic agent. 
+    const prompt = `You are the Dispatcher for a polymorphic agent capable of writing its own code.
 The user wants: "${task}"
 
 Existing executable nodes: [ ${existingNodes.join(', ')} ]
 
-Decide the best course of action. Return JSON exactly like this:
+RULES:
+1. If the request requires fetching live data, scraping, files, or multi-step logic, you MUST choose "COMPILE_NEW_PLAN". DO NOT say "I can't do this". Your compiler WILL build the tools to do it.
+2. If it's just a simple greeting ("hi") or basic fact ("what is 2+2"), use "DIRECT_ANSWER".
+3. If an existing node EXACTLY matches the request, use "REUSE_PLAN".
+
+Return JSON exactly like this:
 {
     "action": "DIRECT_ANSWER" | "REUSE_PLAN" | "COMPILE_NEW_PLAN",
     "answer": "String answer if DIRECT_ANSWER, else null",

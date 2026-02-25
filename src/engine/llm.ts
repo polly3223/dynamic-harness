@@ -32,7 +32,8 @@ STRICT API RULES (DO NOT INVENT METHODS):
 - Export Signature: \`export const run: ExecutableNode = async (args, ctx) => { ... }\`
 - Call Sub-Nodes: \`await ctx.runNode("string_name", args)\`. The first argument MUST be a hardcoded string! Do not pass variables as the node name.
 - Memory Write: \`await ctx.memory.write("path/file.txt", data)\`. Do not use Bun.write!
-- Error Handling: DO NOT swallow errors. If a node fails, let it throw so the global system can see it. Do not write error strings into memory files!
+- Error Handling: DO NOT swallow errors. If a node fails, let it throw.
+- Web Parsing: You run in Bun (Node.js backend). There is NO \`window\`, NO \`document\`, and NO \`DOMParser\`. Use Regex to parse HTML, or use JSON APIs (like duckduckgo lite or news APIs).
 
 Output ONLY raw TypeScript code. No markdown formatting. No explanations.`;
 
