@@ -6,8 +6,36 @@ async function run() {
   console.log("🚀 RACHEL 10: POLYMORPHIC AGENT SHOWCASE");
   console.log("==========================================\n");
 
-  // Wipe slate clean for the showcase
-  await Bun.$`rm -rf src/nodes/*.ts memory/*`;
+  // Wipe slate clean for the showcase (using JS to avoid bash wildcard errors across OSs)
+  try {
+      const fs = await import("fs/promises");
+      const path = await import("path");
+      
+      const nodesDir = path.join(process.cwd(), "src/nodes");
+      const memDir = path.join(process.cwd(), "memory");
+
+      // Clean nodes
+      try {
+          const nodes = await fs.readdir(nodesDir);
+          for (const file of nodes) {
+              if (file.endsWith(".ts")) await fs.unlink(path.join(nodesDir, file));
+          }
+      } catch (e) {}
+
+      // Clean memory
+      try {
+          const memories = await fs.readdir(memDir);
+          for (const file of memories) {
+              if (file !== "users") {
+                const stat = await fs.stat(path.join(memDir, file));
+                if (stat.isFile()) await fs.unlink(path.join(memDir, file));
+              }
+          }
+      } catch (e) {}
+  } catch(e) {
+      console.log("Clean up skipped.");
+  }
+  
   const ctx = createEngine();
 
   // --- STAGE 1: THE FIRST TASK ---
