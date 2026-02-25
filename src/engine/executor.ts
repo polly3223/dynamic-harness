@@ -1,6 +1,6 @@
 import { join } from "path";
 import { mkdir, readdir } from "fs/promises";
-import type { NodeContext } from "../core/types";
+import { NodeContext } from "../core/types";
 import { generateContent, writeNode } from "./llm";
 
 const NODES_DIR = join(import.meta.dir, "..", "nodes");
@@ -21,7 +21,9 @@ export function createEngine(): NodeContext {
       const fullPath = join(MEMORY_DIR, relativePath);
       const dir = fullPath.substring(0, fullPath.lastIndexOf("/"));
       if (dir) await mkdir(dir, { recursive: true });
-      await Bun.write(fullPath, JSON.stringify(data, null, 2));
+      // If data is a string, write it as raw text. Otherwise JSON.
+      const content = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+      await Bun.write(fullPath, content);
     },
     list: async (relativeDir: string): Promise<string[]> => {
       try { return await readdir(join(MEMORY_DIR, relativeDir)); } catch (e) { return []; }
@@ -39,10 +41,18 @@ export function createEngine(): NodeContext {
 
   const _internalRunNode = async (nodeName: string, args: any, depth: number = 0): Promise<any> => {
     const indent = depth === 0 ? "" : "│  ".repeat(depth - 1) + "├─ ";
+    
+    // STRICT VALIDATION: Catch if LLM tries to pass a variable instead of a string
+    if (typeof nodeName !== 'string' || !nodeName) {
+        const errStr = `ctx.runNode requires a STRING name, but got: ${String(nodeName)}`;
+        console.error(`{red-fg}${indent}✖ Invalid runNode call: ${errStr}{/red-fg}`);
+        throw new Error(errStr);
+    }
+
     console.log(`{cyan-fg}${indent}► [Node] ${nodeName}{/cyan-fg}`);
     
     const available = await getAvailableNodes();
-    if (!available.includes(nodeName)) throw new Error(`Node '${nodeName}' does not exist.`);
+    if (!available.includes(nodeName)) throw new Error(`Node '${nodeName}' does not exist on disk.`);
 
     const nodePath = join(NODES_DIR, `${nodeName}.ts`);
     const cacheBuster = Date.now();
@@ -58,7 +68,7 @@ export function createEngine(): NodeContext {
       
       return await module.run(args, context);
     } catch (error) {
-      console.error(`${indent}✖ Fatal Error in '${nodeName}': ${(error as Error).message}`);
+      console.error(`{red-fg}${indent}✖ Fatal Error in '${nodeName}': ${(error as Error).message}{/red-fg}`);
       throw error;
     }
   };

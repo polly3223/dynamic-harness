@@ -24,17 +24,15 @@ Your task is to write an ExecutableNode in TypeScript.
 
 CRITICAL ARCHITECTURE CONCEPTS:
 1. NODES ARE COMPOSABLE: A "Plan" is an Orchestrator Node that calls other Nodes.
-2. DYNAMIC COMPILATION: Use \`await ctx.llm.writeNode('tool_name', 'Instructions...')\` to create missing tools.
+2. DYNAMIC COMPILATION: Use \`await ctx.llm.writeNode('tool_name', 'Instructions...')\` to create missing tools BEFORE calling them.
 3. PARALLEL EXECUTION: Use \`Promise.all()\` for parallel tasks.
 
 STRICT API RULES (DO NOT INVENT METHODS):
 - Required Import: \`import type { ExecutableNode } from "../core/types";\`
 - Export Signature: \`export const run: ExecutableNode = async (args, ctx) => { ... }\`
-- Check Available Nodes: \`const nodes = await ctx.getAvailableNodes();\` (NEVER use ctx.llm.listNodes)
-- Call Sub-Nodes: \`await ctx.runNode(name, args)\`
-- Shell Execution: \`import { $ } from "bun";\` -> \`await $\`ls -la\`\` (MUST use tagged template literals)
-- Memory Write: \`await ctx.memory.write("path/to/file.json", data)\`
-- Memory Read: \`await ctx.memory.read("path/to/file.json")\`
+- Call Sub-Nodes: \`await ctx.runNode("string_name", args)\`. The first argument MUST be a hardcoded string! Do not pass variables as the node name.
+- Memory Write: \`await ctx.memory.write("path/file.txt", data)\`. Do not use Bun.write!
+- Error Handling: DO NOT swallow errors. If a node fails, let it throw so the global system can see it. Do not write error strings into memory files!
 
 Output ONLY raw TypeScript code. No markdown formatting. No explanations.`;
 
